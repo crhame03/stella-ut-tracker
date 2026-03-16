@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stella Rhame — UT Austin TWBH Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f0eb; color: #333; }
+
+  .header { background: linear-gradient(135deg, #bf5700, #cc7a00); color: white; padding: 32px 24px; text-align: center; }
+  .header h1 { font-size: 28px; margin-bottom: 4px; }
+  .header .subtitle { font-size: 16px; opacity: 0.9; }
+  .header .program-badge { display: inline-block; background: rgba(255,255,255,0.2); border-radius: 20px; padding: 6px 16px; margin-top: 12px; font-size: 14px; }
+
+  .summary-bar { display: flex; gap: 16px; padding: 20px 24px; background: white; border-bottom: 1px solid #e0d5c9; flex-wrap: wrap; justify-content: center; }
+  .stat { text-align: center; min-width: 120px; }
+  .stat .num { font-size: 32px; font-weight: 700; }
+  .stat .num.green { color: #2d8a4e; }
+  .stat .num.orange { color: #bf5700; }
+  .stat .num.red { color: #c0392b; }
+  .stat .label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+
+  .alert-banner { background: #fff3cd; border-left: 4px solid #bf5700; padding: 14px 24px; margin: 20px 24px 0; border-radius: 4px; font-size: 14px; }
+  .alert-banner strong { color: #bf5700; }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 20px 24px; }
+
+  .filter-row { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .filter-btn { border: 1px solid #d0c4b8; background: white; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+  .filter-btn:hover { background: #f5f0eb; }
+  .filter-btn.active { background: #bf5700; color: white; border-color: #bf5700; }
+
+  .section-label { font-size: 13px; font-weight: 600; color: #bf5700; text-transform: uppercase; letter-spacing: 1.5px; margin: 24px 0 12px; padding-bottom: 8px; border-bottom: 2px solid #bf5700; }
+
+  .task { background: white; border-radius: 8px; padding: 16px 20px; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 14px; border: 1px solid #e8e0d8; transition: all 0.2s; cursor: pointer; }
+  .task:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .task.completed { opacity: 0.6; }
+  .task.completed .task-title { text-decoration: line-through; }
+  .task.overdue { border-left: 4px solid #c0392b; }
+  .task.urgent { border-left: 4px solid #e67e22; }
+  .task.upcoming { border-left: 4px solid #3498db; }
+
+  .checkbox { width: 22px; height: 22px; border: 2px solid #bf5700; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 2px; cursor: pointer; transition: all 0.2s; }
+  .checkbox.checked { background: #2d8a4e; border-color: #2d8a4e; }
+  .checkbox.checked::after { content: '✓'; color: white; font-size: 14px; font-weight: bold; }
+
+  .task-content { flex: 1; }
+  .task-title { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+  .task-meta { font-size: 13px; color: #666; }
+  .task-meta a { color: #bf5700; text-decoration: none; }
+  .task-meta a:hover { text-decoration: underline; }
+
+  .due-badge { font-size: 12px; padding: 4px 10px; border-radius: 12px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+  .due-badge.done { background: #d4edda; color: #155724; }
+  .due-badge.overdue { background: #f8d7da; color: #721c24; }
+  .due-badge.urgent { background: #fff3cd; color: #856404; }
+  .due-badge.upcoming { background: #d1ecf1; color: #0c5460; }
+  .due-badge.later { background: #e8e0d8; color: #666; }
+
+  .notes-area { margin-top: 8px; font-size: 13px; color: #555; background: #f9f6f2; padding: 8px 12px; border-radius: 6px; display: none; }
+  .task.expanded .notes-area { display: block; }
+
+  .links-section { margin-top: 32px; background: white; border-radius: 8px; padding: 20px; border: 1px solid #e8e0d8; }
+  .links-section h3 { margin-bottom: 12px; color: #bf5700; }
+  .link-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
+  .link-card { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #f9f6f2; border-radius: 6px; text-decoration: none; color: #333; transition: background 0.2s; }
+  .link-card:hover { background: #f0e8df; }
+  .link-icon { font-size: 20px; }
+  .link-label { font-size: 13px; font-weight: 500; }
+
+  .footer { text-align: center; padding: 24px; font-size: 12px; color: #999; }
+
+  @media (max-width: 600px) {
+    .summary-bar { gap: 8px; }
+    .stat .num { font-size: 24px; }
+    .task { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🤘 Stella Rhame — UT Austin</h1>
+  <div class="subtitle">Take the World by the Horns: Seoul, South Korea</div>
+  <div class="program-badge">Moody College of Communication · Journalism · Fall 2026 Abroad → Spring 2027 On Campus</div>
+</div>
+
+<div class="summary-bar" id="summaryBar">
+  <div class="stat"><div class="num green" id="completedCount">0</div><div class="label">Completed</div></div>
+  <div class="stat"><div class="num orange" id="pendingCount">0</div><div class="label">To Do</div></div>
+  <div class="stat"><div class="num red" id="urgentCount">0</div><div class="label">Urgent</div></div>
+  <div class="stat"><div class="num" id="daysToOrientation" style="color:#bf5700">0</div><div class="label">Days to Orientation Reg</div></div>
+</div>
+
+<div class="container">
+
+<div class="alert-banner" id="alertBanner"></div>
+
+<div class="filter-row">
+  <button class="filter-btn active" onclick="filterTasks('all')">All Tasks</button>
+  <button class="filter-btn" onclick="filterTasks('todo')">To Do</button>
+  <button class="filter-btn" onclick="filterTasks('completed')">Completed</button>
+  <button class="filter-btn" onclick="filterTasks('urgent')">Urgent</button>
+</div>
+
+<div id="taskContainer"></div>
+
+<div class="links-section">
+  <h3>Quick Links</h3>
+  <div class="link-grid">
+    <a class="link-card" href="https://my.utexas.edu/student/" target="_blank"><span class="link-icon">🏠</span><span class="link-label">MyUT Student Portal</span></a>
+    <a class="link-card" href="https://bealonghorn.admissions.utexas.edu/portal/mystatus" target="_blank"><span class="link-icon">📋</span><span class="link-label">MyStatus (Admissions Checklist)</span></a>
+    <a class="link-card" href="https://orientation.utexas.edu/content/freshman/before-orientation" target="_blank"><span class="link-icon">🎓</span><span class="link-label">Longhorn Orientation Registration</span></a>
+    <a class="link-card" href="https://global.utexas.edu/abroad/programs/first-semester-abroad" target="_blank"><span class="link-icon">🌏</span><span class="link-label">TWBH Program — Texas Global</span></a>
+    <a class="link-card" href="https://global.utexas.edu/abroad/programs/first-semester-abroad/faqs" target="_blank"><span class="link-icon">❓</span><span class="link-label">TWBH FAQs</span></a>
+    <a class="link-card" href="https://sfp.ocs.oraclecloud.com/utaustin/portal/home" target="_blank"><span class="link-icon">💰</span><span class="link-label">Financial Aid Portal</span></a>
+    <a class="link-card" href="https://utdirect.utexas.edu/registrar/ris.WBX" target="_blank"><span class="link-icon">📝</span><span class="link-label">Registration Info (UT Direct)</span></a>
+    <a class="link-card" href="https://www.universityhealthservices.utexas.edu/immunization" target="_blank"><span class="link-icon">💉</span><span class="link-label">Immunization / Medical Clearance</span></a>
+    <a class="link-card" href="https://housing.utexas.edu" target="_blank"><span class="link-icon">🏡</span><span class="link-label">UT Housing (for Spring 2027)</span></a>
+    <a class="link-card" href="mailto:educationabroad@austin.utexas.edu" target="_blank"><span class="link-icon">✉️</span><span class="link-label">Email Texas Global</span></a>
+    <a class="link-card" href="https://parents.utexas.edu/family-orientation" target="_blank"><span class="link-icon">👨‍👩‍👧</span><span class="link-label">Family Orientation Info</span></a>
+    <a class="link-card" href="https://travel.state.gov/content/travel/en/passports.html" target="_blank"><span class="link-icon">🛂</span><span class="link-label">U.S. Passport Services</span></a>
+    <a class="link-card" href="https://global.utexas.edu/abroad/programs/first-semester-abroad/society-technology-health-wellbeing-south-korea" target="_blank"><span class="link-icon">🇰🇷</span><span class="link-label">Seoul Program Page (Dates & Costs)</span></a>
+    <a class="link-card" href="https://security.utexas.edu/MFA-Readiness" target="_blank"><span class="link-icon">🔐</span><span class="link-label">Duo Setup (Two-Factor Auth)</span></a>
+    <a class="link-card" href="https://get.utmail.utexas.edu" target="_blank"><span class="link-icon">📧</span><span class="link-label">Activate UT Email</span></a>
+    <a class="link-card" href="https://www.medproctor.com" target="_blank"><span class="link-icon">🏥</span><span class="link-label">Med+Proctor (Immunization Upload)</span></a>
+    <a class="link-card" href="https://www.healthyhorns.utexas.edu/uhs/us-citizens.html" target="_blank"><span class="link-icon">💉</span><span class="link-label">Required Vaccines List</span></a>
+    <a class="link-card" href="tel:5124759400" target="_blank"><span class="link-icon">📞</span><span class="link-label">UT IT Help Desk: 512-475-9400</span></a>
+  </div>
+</div>
+
+</div>
+
+<!-- Verification Modal -->
+<div id="verifyOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:white; border-radius:12px; padding:28px 32px; max-width:440px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+    <div style="font-size:20px; font-weight:700; color:#bf5700; margin-bottom:4px;">Confirm Completed</div>
+    <div id="verifyTitle" style="font-size:15px; color:#555; margin-bottom:16px; font-weight:500;"></div>
+    <div style="font-size:13px; color:#333; margin-bottom:8px;">Type your name to verify this is actually done:</div>
+    <input id="verifyName" type="text" placeholder="Chris or Stella" style="width:100%; padding:10px 14px; border:1px solid #d0c4b8; border-radius:8px; font-size:15px; margin-bottom:16px; outline:none;">
+    <div style="display:flex; gap:10px; justify-content:flex-end;">
+      <button id="verifyCancel" style="padding:10px 20px; border:1px solid #d0c4b8; background:white; border-radius:8px; cursor:pointer; font-size:14px;">Cancel</button>
+      <button id="verifyConfirm" style="padding:10px 20px; border:none; background:#2d8a4e; color:white; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;">Mark as Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  Last updated: March 15, 2026 · Stella Rhame (ssr2827) · Hook 'em! 🤘
+</div>
+
+<script>
+const TASKS = [
+  // ===== COMPLETED (VERIFIED FROM MYSTATUS 3/15/2026) =====
+  { id: 1, title: "Accept UT Austin Admission & TWBH Offer", category: "admissions", due: "2026-03-01", completed: true,
+    notes: "VERIFIED: Accepted on MyStatus. Stella is confirmed for TWBH Seoul, South Korea cohort. Moody College of Communication, Journalism major. Returning to UT campus Spring 2027.",
+    link: "https://bealonghorn.admissions.utexas.edu/portal/mystatus" },
+  { id: 2, title: "Pay Enrollment Deposit", category: "admissions", due: "2026-03-06", completed: true,
+    notes: "VERIFIED: Received 03/06/2026 per MyStatus checklist. Required before orientation registration.",
+    link: "https://bealonghorn.admissions.utexas.edu/portal/mystatus" },
+  { id: 3, title: "Submit Freshman Application & All Documents", category: "admissions", due: "2025-10-28", completed: true,
+    notes: "VERIFIED: All 12 checklist items green on MyStatus: Freshman Application Form (9/26), Essay (9/26), Resume (9/26), Optional Short Answer (9/26), Short Answer Response 1 (9/26), Short Answer Response 2 (9/26), High School Transcript (9/26), Application Fee Waiver (9/27), ACT/SAT Scores (10/14), Letter of Recommendation (10/22), TWBH Application Form (10/28).",
+    link: "https://bealonghorn.admissions.utexas.edu/portal/mystatus" },
+  { id: 4, title: "File 2026-2027 FAFSA", category: "financial", due: "2026-01-15", completed: true,
+    notes: "VERIFIED WITH CHRIS: The 2026-2027 FAFSA has been filed. This is the correct FAFSA year for Fall 2026 enrollment. (The 2025-2026 FAFSA is NOT needed — that covers Fall 2025/Spring 2026.) UT Austin school code: 003658. Financial aid CAN be used for the TWBH program. Total program cost: $22,860.",
+    link: "https://studentaid.gov" },
+
+  // ===== DO RIGHT NOW (THIS WEEK) =====
+  { id: 5, title: "Set Up Duo Two-Factor Authentication on Stella's Phone", category: "account", due: "2026-03-17", completed: false,
+    notes: "REQUIRED BEFORE almost everything else. Duo is needed to access MyUT, orientation registration, Canvas, UT Zoom, and email. Steps: (1) Download 'Duo Mobile' app on Stella's phone from App Store or Google Play. (2) Go to https://duo.utexas.edu and log in with UT EID ssr2827 and password. (3) Follow prompts to register Stella's phone. (4) Test by logging into my.utexas.edu. If you get an error about 'not enrolled due to Multi-factor Duo Authentication,' Duo is not set up yet. For help call UT IT Help Desk: 512-475-9400.",
+    link: "https://security.utexas.edu/MFA-Readiness" },
+  { id: 6, title: "Activate UT Student Email (ssr2827@my.utexas.edu)", category: "account", due: "2026-03-20", completed: false,
+    notes: "REQUIRES DUO FIRST. Stella's official UT email is ssr2827@my.utexas.edu (Microsoft 365). ALL university communications go here including orientation info and Texas Global pre-departure details. Steps: (1) Go to https://get.utmail.utexas.edu (2) Log in with UT EID ssr2827 (3) Complete activation. Then set up forwarding: In Outlook settings, go to Mail > Forwarding > add crhame03@gmail.com and Stella's personal email. For help: UT Service Desk 512-475-9400 or help@utexas.edu.",
+    link: "https://get.utmail.utexas.edu" },
+  { id: 7, title: "Accept Electronic Consent (Financial Aid Portal)", category: "financial", due: "2026-03-20", completed: false,
+    notes: "REQUIRES DUO. When you log into the Financial Aid portal, you must accept the electronic consent to conduct business electronically. Takes 1 minute. This unlocks your ability to view financial aid awards, accept/decline aid, and manage billing. We saw this screen on 3/15 but did not accept it.",
+    link: "https://sfp.ocs.oraclecloud.com/utaustin/portal/home" },
+  // NOTE: CAP (Coordinated Admission Program) does NOT apply — Stella was directly admitted to TWBH.
+  // The CAP link on MyStatus is a generic portal element, not a requirement for her enrollment path.
+
+  // ===== APRIL 2026 =====
+  { id: 9, title: "REGISTER FOR ORIENTATION — April 1 at 2:00 PM Sharp!", category: "orientation", due: "2026-04-01", completed: false,
+    notes: "MOST TIME-SENSITIVE ITEM. Moody College of Communication orientation registration opens Wednesday, April 1 at exactly 2:00 PM CT. Sessions FILL UP FAST. For TWBH students in Moody, the designated session is Session 22 (July 20-21, Mon-Tue). You can also attend Sessions 19 (July 13-14), 20 (July 14-15), or 23 (July 21-22). SET AN ALARM for 1:55 PM on April 1. Be logged in and ready to click. Requires: accepted admission + enrollment deposit paid (both done) + Duo set up.",
+    link: "https://orientation.utexas.edu/content/freshman/before-orientation" },
+  { id: 10, title: "Review & Sign TWBH Program Contract", category: "program", due: "2026-04-15", completed: false,
+    notes: "MyStatus includes a link to 'review the contract online.' Read through the full program terms, costs ($22,860 total), cancellation policy, and responsibilities carefully before signing. Program includes: registration fees, tuition, overseas insurance, flights, passport assistance, visa, pre-departure costs, housing in Seoul, excursions, meals, and estimated personal expenses.",
+    link: "https://bealonghorn.admissions.utexas.edu/portal/mystatus" },
+  { id: 11, title: "Register Family for Family Orientation", category: "orientation", due: "2026-04-30", completed: false,
+    notes: "Parents/family can register separately for Family Orientation to learn about resources for supporting Stella's transition. Especially important since she'll be abroad first semester.",
+    link: "https://parents.utexas.edu/family-orientation" },
+  { id: 12, title: "Verify Passport Valid Through June 2027+", category: "travel", due: "2026-04-15", completed: false,
+    notes: "South Korea D-2 student visa requires a passport valid for at least 6 months beyond the end of stay. Stella's program ends Dec 19, 2026, so passport must be valid through at least June 2027. If renewal needed, apply NOW — standard processing is 6-8 weeks. Expedited available for extra fee at travel.state.gov. You'll also need the passport for the visa application.",
+    link: "https://travel.state.gov/content/travel/en/passports.html" },
+  { id: 13, title: "Send AP / IB / CLEP Test Scores to UT Austin", category: "academics", due: "2026-04-30", completed: false,
+    notes: "If Stella has any AP, IB, or CLEP scores from high school, have them officially sent to UT Austin for credit evaluation. ACT/SAT scores are already received (10/14/2025). These credits may help with degree progress even though first-semester courses will be abroad.",
+    link: "https://admissions.utexas.edu/apply/freshman/credentials" },
+
+  // ===== MAY 2026 =====
+  { id: 14, title: "Attend Spring Virtual Pre-Departure Session", category: "program", due: "2026-05-31", completed: false,
+    notes: "MANDATORY for all TWBH participants. Virtual session covering program timelines, logistics, packing, what to expect in Seoul. Exact date TBD — Texas Global will email details to ssr2827@my.utexas.edu (and educationabroad@austin.utexas.edu is the sender to watch for). Make sure UT email forwarding is set up so you don't miss this.",
+    link: "https://global.utexas.edu/abroad/programs/first-semester-abroad" },
+
+  // ===== JUNE 2026 =====
+  { id: 15, title: "Complete Immunizations & Upload to Med+Proctor", category: "health", due: "2026-06-15", completed: false,
+    notes: "REQUIRED before class registration. Texas law (SB 1107) requires bacterial meningitis vaccine (quadrivalent or pentavalent only — meningitis B does NOT count) administered within 5 years but no later than 10 DAYS before first day of classes. Also need: proof of MMR immunity + TB screening. For South Korea travel: check CDC recommendations for additional vaccines. Upload all records to Med+Proctor (medproctor.com) using UT EID ssr2827. $10 processing fee ($15 for expedited 3-hour review). Status must show 'Complete' on Med+Proctor before UT will clear you.",
+    link: "https://www.healthyhorns.utexas.edu/uhs/us-citizens.html" },
+  { id: 16, title: "Submit Final High School Transcript", category: "admissions", due: "2026-06-30", completed: false,
+    notes: "After Stella graduates, her high school must send a FINAL official transcript to UT Austin showing degree conferral date. Contact the high school guidance counselor to arrange this. Can be sent electronically or by mail.",
+    link: "https://bealonghorn.admissions.utexas.edu/portal/mystatus" },
+  { id: 17, title: "Apply for South Korea D-2 Student Visa", category: "travel", due: "2026-06-30", completed: false,
+    notes: "US citizens studying in South Korea for more than 90 days MUST obtain a D-2 student visa. Texas Global will provide a Certificate of Admission and visa instructions. Required documents: valid passport, completed application form, photo (3.5x4.5cm), proof of financial ability, Certificate of Admission from host university. Apply at the Korean Embassy/Consulate (Houston or nearest). Processing takes ~4 business days. OECD citizens (US included) have reduced documentation requirements. Do NOT wait until last minute.",
+    link: "https://global.utexas.edu/abroad/programs/first-semester-abroad" },
+
+  // ===== JULY 2026 =====
+  { id: 18, title: "Attend Longhorn Orientation (Session 22: July 20-21)", category: "orientation", due: "2026-07-20", completed: false,
+    notes: "2-day in-person orientation at UT Austin campus in Austin, TX. TWBH students attend supplemental programming specific to study abroad. Stella will register for 12 credit hours of 'affiliate placeholder' courses for the Seoul semester. These appear as transfer credits and are NOT computed into UT GPA. Book travel/hotel for Austin if needed.",
+    link: "https://orientation.utexas.edu" },
+  { id: 19, title: "Pick Up UT ID Card at Flawn Academic Center", category: "account", due: "2026-07-20", completed: false,
+    notes: "Visit Flawn Academic Center (FAC) on campus during orientation to get Stella's official UT ID card. Bring a photo ID.",
+    link: "https://utexas.edu" },
+  { id: 20, title: "Register for Affiliate Placeholder Courses (at Orientation)", category: "academics", due: "2026-07-21", completed: false,
+    notes: "During orientation, register for the 12 credit hours of affiliate placeholder courses for the Seoul program. An advisor will help with this. Credits transfer back to UT but do not count as in-residence credit.",
+    link: "https://my.utexas.edu" },
+
+  // ===== AUGUST 2026 =====
+  { id: 21, title: "Complete ALL Texas Global Pre-Departure Requirements", category: "program", due: "2026-08-10", completed: false,
+    notes: "Texas Global will send a comprehensive pre-departure checklist. Expect requirements including: overseas health insurance enrollment, emergency contact forms, flight booking confirmation, visa copy, housing assignment confirmation for Seoul, signed waivers/agreements, packing list review. Watch UT email carefully. Contact educationabroad@austin.utexas.edu with questions.",
+    link: "https://global.utexas.edu/abroad/programs/first-semester-abroad" },
+  { id: 22, title: "Apply for Spring 2027 Housing at UT Austin", category: "housing", due: "2026-08-15", completed: false,
+    notes: "Stella returns to UT Austin campus for Spring 2027. On-campus housing is LIMITED and first-come-first-served for spring. $100 non-refundable application fee. Apply EARLY through the housing portal. Alternative: explore off-campus options via UT Off-Campus Housing Marketplace. Important: In South Korea, students cannot leave the country until they receive their Foreign Residency Card (usually not processed until November), so housing search may need to happen remotely.",
+    link: "https://housing.utexas.edu/housing/residence-halls/residence-hall-application-process" },
+  { id: 23, title: "Depart for Seoul, South Korea!", category: "travel", due: "2026-08-22", completed: false,
+    notes: "ARRIVAL DATE: August 22, 2026 (tentative per Texas Global). Classes start September 1, 2026. Classes end and departure: December 19, 2026. Stella will spend Fall 2026 in Seoul studying 'Society and Technology, Health and Well-being.' Program cost of $22,860 includes flights, so Texas Global will coordinate flight booking.",
+    link: "https://global.utexas.edu/abroad/programs/first-semester-abroad/society-technology-health-wellbeing-south-korea" },
+];
+
+// Load saved state from localStorage
+function loadState() {
+  try {
+    const saved = localStorage.getItem('stella_ut_tasks_v2');
+    if (saved) {
+      const states = JSON.parse(saved);
+      TASKS.forEach(t => {
+        if (states[t.id]) {
+          t.completed = states[t.id].done;
+          t.verifiedBy = states[t.id].verifiedBy || '';
+          t.verifiedDate = states[t.id].verifiedDate || '';
+        }
+      });
+    }
+  } catch(e) {}
+}
+
+function saveState() {
+  const states = {};
+  TASKS.forEach(t => states[t.id] = { done: t.completed, verifiedBy: t.verifiedBy || '', verifiedDate: t.verifiedDate || '' });
+  try { localStorage.setItem('stella_ut_tasks_v2', JSON.stringify(states)); } catch(e) {}
+}
+
+function getDaysUntil(dateStr) {
+  const target = new Date(dateStr + 'T00:00:00');
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  return Math.ceil((target - today) / (1000*60*60*24));
+}
+
+function getUrgency(task) {
+  if (task.completed) return 'done';
+  const days = getDaysUntil(task.due);
+  if (days < 0) return 'overdue';
+  if (days <= 14) return 'urgent';
+  if (days <= 45) return 'upcoming';
+  return 'later';
+}
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+let currentFilter = 'all';
+
+function filterTasks(filter) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderTasks();
+}
+
+function toggleTask(id) {
+  const task = TASKS.find(t => t.id === id);
+  if (task.completed) {
+    // Unchecking — just confirm quickly
+    if (confirm(`Mark "${task.title}" as NOT done?`)) {
+      task.completed = false;
+      task.verifiedBy = '';
+      task.verifiedDate = '';
+      saveState();
+      renderTasks();
+      updateSummary();
+    }
+    return;
+  }
+  // Checking — show the verification modal
+  showVerifyModal(task);
+}
+
+function showVerifyModal(task) {
+  const overlay = document.getElementById('verifyOverlay');
+  const title = document.getElementById('verifyTitle');
+  const input = document.getElementById('verifyName');
+  const confirmBtn = document.getElementById('verifyConfirm');
+  const cancelBtn = document.getElementById('verifyCancel');
+
+  title.textContent = task.title;
+  input.value = '';
+  overlay.style.display = 'flex';
+  input.focus();
+
+  const doConfirm = () => {
+    const name = input.value.trim();
+    if (!name) { input.style.border = '2px solid #c0392b'; input.placeholder = 'You must type your name!'; return; }
+    task.completed = true;
+    task.verifiedBy = name;
+    task.verifiedDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    saveState();
+    overlay.style.display = 'none';
+    renderTasks();
+    updateSummary();
+    cleanup();
+  };
+  const doCancel = () => { overlay.style.display = 'none'; cleanup(); };
+  const cleanup = () => {
+    confirmBtn.removeEventListener('click', doConfirm);
+    cancelBtn.removeEventListener('click', doCancel);
+  };
+  confirmBtn.addEventListener('click', doConfirm);
+  cancelBtn.addEventListener('click', doCancel);
+}
+
+function toggleExpand(id) {
+  const el = document.querySelector(`[data-id="${id}"]`);
+  el.classList.toggle('expanded');
+}
+
+function renderTasks() {
+  const container = document.getElementById('taskContainer');
+  let filtered = [...TASKS];
+
+  if (currentFilter === 'todo') filtered = filtered.filter(t => !t.completed);
+  else if (currentFilter === 'completed') filtered = filtered.filter(t => t.completed);
+  else if (currentFilter === 'urgent') filtered = filtered.filter(t => !t.completed && ['overdue','urgent'].includes(getUrgency(t)));
+
+  // Sort: overdue first, then by due date
+  filtered.sort((a, b) => {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    return new Date(a.due) - new Date(b.due);
+  });
+
+  // Group by month
+  const groups = {};
+  filtered.forEach(t => {
+    const d = new Date(t.due + 'T00:00:00');
+    const key = t.completed ? 'Completed' : d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(t);
+  });
+
+  let html = '';
+  for (const [group, tasks] of Object.entries(groups)) {
+    html += `<div class="section-label">${group}</div>`;
+    tasks.forEach(t => {
+      const urgency = getUrgency(t);
+      const days = getDaysUntil(t.due);
+      let badgeText = '';
+      if (urgency === 'done') badgeText = 'Done';
+      else if (urgency === 'overdue') badgeText = `${Math.abs(days)}d overdue`;
+      else if (urgency === 'urgent') badgeText = days === 0 ? 'TODAY' : `${days}d left`;
+      else if (urgency === 'upcoming') badgeText = `${days} days`;
+      else badgeText = `${days} days`;
+
+      const verifiedInfo = t.completed && t.verifiedBy
+        ? `<div style="font-size:12px; color:#2d8a4e; margin-top:4px;">Verified by ${t.verifiedBy} · ${t.verifiedDate}</div>`
+        : '';
+
+      html += `
+        <div class="task ${urgency} ${t.completed ? 'completed' : ''}" data-id="${t.id}">
+          <div class="checkbox ${t.completed ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTask(${t.id})"></div>
+          <div class="task-content" onclick="toggleExpand(${t.id})">
+            <div class="task-title">${t.title}</div>
+            <div class="task-meta">
+              Due: ${formatDate(t.due)}
+              ${t.link ? ` · <a href="${t.link}" target="_blank" onclick="event.stopPropagation()">Open link ↗</a>` : ''}
+            </div>
+            ${verifiedInfo}
+            <div class="notes-area">${t.notes}</div>
+          </div>
+          <div class="due-badge ${urgency}">${badgeText}</div>
+        </div>`;
+    });
+  }
+
+  container.innerHTML = html;
+}
+
+function updateSummary() {
+  const completed = TASKS.filter(t => t.completed).length;
+  const pending = TASKS.filter(t => !t.completed).length;
+  const urgent = TASKS.filter(t => !t.completed && ['overdue','urgent'].includes(getUrgency(t))).length;
+  const daysToOrientationReg = getDaysUntil('2026-04-01');
+
+  document.getElementById('completedCount').textContent = completed;
+  document.getElementById('pendingCount').textContent = pending;
+  document.getElementById('urgentCount').textContent = urgent;
+  document.getElementById('daysToOrientation').textContent = daysToOrientationReg;
+
+  // Alert banner
+  const banner = document.getElementById('alertBanner');
+  const overdue = TASKS.filter(t => !t.completed && getUrgency(t) === 'overdue');
+  const urgentTasks = TASKS.filter(t => !t.completed && getUrgency(t) === 'urgent');
+
+  if (overdue.length > 0) {
+    banner.innerHTML = `<strong>⚠️ ${overdue.length} overdue item(s)!</strong> ${overdue.map(t => t.title).join(', ')}`;
+    banner.style.background = '#f8d7da';
+    banner.style.borderColor = '#c0392b';
+  } else if (urgentTasks.length > 0) {
+    banner.innerHTML = `<strong>⏰ ${urgentTasks.length} item(s) due within 2 weeks:</strong> ${urgentTasks.map(t => t.title).join(', ')}`;
+  } else {
+    banner.innerHTML = `<strong>✅ Looking good!</strong> No urgent deadlines right now. Next up: orientation registration on April 1.`;
+    banner.style.background = '#d4edda';
+    banner.style.borderColor = '#2d8a4e';
+  }
+}
+
+// Init
+loadState();
+renderTasks();
+updateSummary();
+</script>
+</body>
+</html>
